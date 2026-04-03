@@ -6,7 +6,6 @@ import { prisma } from "./db.js";
 
 dotenv.config();
 
-// Intents completi per non avere errori di permessi
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
@@ -24,31 +23,25 @@ const commands = [
 ].map(c => c.toJSON());
 
 client.once(Events.ClientReady, async () => {
-    console.log(`🛡️ SISTEMA ONLEY PRO V5 - Accesso come: ${client.user.tag}`);
+    console.log(`🛡️ LOGGED IN AS: ${client.user.tag}`); // Questo deve apparire nei log di Railway
     try {
         const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+        // Registrazione globale dei comandi
         await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
-        console.log("✅ Comandi Slash registrati correttamente.");
+        console.log("✅ COMANDI SLASH SINCROIZZATI CON DISCORD");
         startWeb(); 
     } catch (err) {
-        console.error("❌ Errore inizializzazione:", err);
+        console.error("❌ ERRORE CRITICO TOKEN/COMANDI:", err);
     }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
-    // Gestione Comandi Slash
     if (interaction.isChatInputCommand()) {
         if (interaction.commandName === 'pannello-cartellino') {
             await inviaPannelloCartellino(interaction);
         }
     }
-
-    // Gestione Tasti (Biometrici)
-    if (interaction.isButton()) {
-        console.log(`Tasto premuto: ${interaction.customId} da ${interaction.user.username}`);
-        await interaction.reply({ content: "🧬 Scansione biometrica in corso...", ephemeral: true });
-        // Qui collegheremo clock.js nel prossimo passaggio
-    }
+    // Logica tasti biometrici qui sotto...
 });
 
 client.login(process.env.DISCORD_TOKEN);
