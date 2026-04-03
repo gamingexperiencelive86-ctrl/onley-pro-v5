@@ -1,0 +1,20 @@
+{
+  "name": "onley-pro-v5",
+  "version": "5.0.0",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "npx prisma generate && npx prisma db push --accept-data-loss && node src/index.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "node-fetch": "^3.3.2",
+    "dayjs": "^1.11.10"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}
