@@ -7,7 +7,7 @@ import { prisma } from "./db.js";
 dotenv.config();
 
 // Sostituisci con il tuo ID numerico (es. "123456789012345678")
-const PROPRIETARIO_ID = "IL_TUO_ID_DISCORD"; 
+const PROPRIETARIO_ID = "945771887340978246"; 
 
 const client = new Client({ 
     intents: [3276799] 
