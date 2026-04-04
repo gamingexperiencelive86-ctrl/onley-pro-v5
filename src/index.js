@@ -6,12 +6,10 @@ import { prisma } from "./db.js";
 
 dotenv.config();
 
-// Sostituisci con il tuo ID numerico (es. "123456789012345678")
+// METTI IL TUO ID DISCORD QUI SOTTO
 const PROPRIETARIO_ID = "945771887340978246"; 
 
-const client = new Client({ 
-    intents: [3276799] 
-});
+const client = new Client({ intents: [3276799] });
 
 const commands = [
     new SlashCommandBuilder().setName('pannello-cartellino').setDescription('Invia il terminale biometrico'),
@@ -25,24 +23,21 @@ client.once(Events.ClientReady, async () => {
     try {
         const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
         await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
-        console.log("✅ COMANDI REGISTRATI");
+        console.log("✅ COMANDI CARICATI");
         startWeb(); 
-    } catch (err) {
-        console.error("❌ ERRORE AVVIO:", err);
-    }
+    } catch (err) { console.error(err); }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
-    // RISPOSTA IMMEDIATA PER EVITARE IL TIMEOUT
+    // --- TRUCCO ANTI-FAIL ---
+    // Questa riga dice a Discord: "Sto lavorando, non chiudere la connessione!"
     await interaction.deferReply({ ephemeral: true });
 
     try {
         if (interaction.commandName === 'attiva-licenza') {
-            if (interaction.user.id !== PROPRIETARIO_ID) {
-                return interaction.editReply("❌ Accesso negato.");
-            }
+            if (interaction.user.id !== PROPRIETARIO_ID) return interaction.editReply("❌ Non sei il proprietario.");
             
             const gId = interaction.options.getString('server_id');
             const mesi = interaction.options.getInteger('mesi');
@@ -59,16 +54,18 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         if (interaction.commandName === 'pannello-cartellino') {
             const lic = await prisma.license.findUnique({ where: { guildId: interaction.guildId } });
+            
             if (!lic || lic.expiresAt < new Date()) {
-                return interaction.editReply("❌ Licenza mancante o scaduta.");
+                return interaction.editReply("❌ Licenza non attiva per questo server.");
             }
-            // Usiamo followUp o editReply per mandare il pannello
+
+            // Inviamo il pannello e confermiamo
             await inviaPannelloCartellino(interaction);
-            await interaction.editReply("✅ Terminale caricato.");
+            await interaction.editReply("✅ Pannello inviato con successo.");
         }
     } catch (err) {
-        console.error(err);
-        await interaction.editReply("❌ Errore interno nel database.");
+        console.error("ERRORE DB:", err);
+        await interaction.editReply("❌ Errore di connessione al database. Riprova tra 10 secondi.");
     }
 });
 
