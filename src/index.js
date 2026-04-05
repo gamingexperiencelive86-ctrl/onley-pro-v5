@@ -7,7 +7,6 @@ import { timbra, pausa, rientra, stimbra } from "./commands/clock.js";
 
 dotenv.config();
 
-// METTI IL TUO ID DISCORD QUI (Esempio: "123456789012345678")
 const PROPRIETARIO_ID = "945771887340978246"; 
 
 const client = new Client({ 
