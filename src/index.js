@@ -7,20 +7,13 @@ import { timbra, pausa, rientra, stimbra } from "./commands/clock.js";
 
 dotenv.config();
 
-// IMPORTANTE: Metti il tuo ID numerico tra le virgolette qui sotto
 const PROPRIETARIO_ID = "945771887340978246"; 
 
-const client = new Client({ 
-    intents: [
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.MessageContent, 
-        GatewayIntentBits.GuildMembers
-    ] 
-});
+const client = new Client({ intents: [3276799] });
 
 const commands = [
     new SlashCommandBuilder().setName('pannello-cartellino').setDescription('Invia il terminale biometrico'),
+    new SlashCommandBuilder().setName('stato-licenza').setDescription('Controlla la scadenza del server'),
     new SlashCommandBuilder().setName('attiva-licenza').setDescription('Attiva licenza Onley')
         .addStringOption(o => o.setName('server_id').setDescription('ID Server').setRequired(true))
         .addIntegerOption(o => o.setName('mesi').setDescription('Mesi').setRequired(true))
@@ -33,7 +26,7 @@ client.once(Events.ClientReady, async () => {
         await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
         console.log("✅ COMANDI SINCRONIZZATI");
         startWeb(); 
-    } catch (err) { console.error("Errore REST:", err); }
+    } catch (err) { console.error(err); }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -41,38 +34,44 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.deferReply({ flags: [64] });
 
         try {
+            // COMANDO STATO LICENZA
+            if (interaction.commandName === 'stato-licenza') {
+                const lic = await prisma.license.findUnique({ where: { guildId: interaction.guildId } });
+                if (!lic) return interaction.editReply("❌ Nessuna licenza trovata per questo server.");
+                
+                const scadenza = new Date(lic.expiresAt).toLocaleDateString('it-IT');
+                const giorniRimanenti = Math.ceil((new Date(lic.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
+                
+                return interaction.editReply(`📊 **STATO LICENZA ONLEY**\n• Scadenza: \`${scadenza}\`\n• Giorni rimanenti: \`${giorniRimanenti}\`\n• Stato: ${giorniRimanenti > 0 ? "🟢 ATTIVA" : "🔴 SCADUTA"}`);
+            }
+
             // COMANDO ATTIVAZIONE
             if (interaction.commandName === 'attiva-licenza') {
-                if (interaction.user.id !== PROPRIETARIO_ID) return interaction.editReply("❌ Accesso negato.");
-                
+                if (interaction.user.id !== PROPRIETARIO_ID) return interaction.editReply("❌ Solo il proprietario può farlo.");
                 const gId = interaction.options.getString('server_id');
                 const mesi = interaction.options.getInteger('mesi');
                 const scadenza = new Date();
                 scadenza.setMonth(scadenza.getMonth() + mesi);
 
-                // Usiamo il modello "license" (maiuscolo o minuscolo a seconda dello schema)
                 await prisma.license.upsert({
                     where: { guildId: gId },
                     update: { expiresAt: scadenza, active: true },
                     create: { guildId: gId, expiresAt: scadenza }
                 });
-                return interaction.editReply(`✅ Licenza attivata per ${gId} fino al ${scadenza.toLocaleDateString()}`);
+                return interaction.editReply(`✅ Licenza attivata per ${gId} fino al ${scadenza.toLocaleDateString('it-IT')}`);
             }
 
-            // CONTROLLO LICENZA PER IL PANNELLO
+            // COMANDO PANNELLO
             if (interaction.commandName === 'pannello-cartellino') {
                 const lic = await prisma.license.findUnique({ where: { guildId: interaction.guildId } });
+                if (!lic || lic.expiresAt < new Date()) return interaction.editReply("❌ Licenza mancante o scaduta.");
                 
-                if (!lic || lic.expiresAt < new Date()) {
-                    return interaction.editReply("❌ Server non autorizzato. Usa prima /attiva-licenza.");
-                }
-
                 await inviaPannelloCartellino(interaction);
-                await interaction.editReply("✅ Terminale biometrico caricato.");
+                await interaction.editReply("✅ Terminale caricato.");
             }
         } catch (err) {
-            console.error("ERRORE DATABASE DETTAGLIATO:", err); // Questo ti dirà il problema nei log di Railway
-            await interaction.editReply(`❌ Errore Database. Assicurati di aver eseguito /attiva-licenza.`);
+            console.error(err);
+            await interaction.editReply("❌ Errore critico database.");
         }
     }
 
@@ -86,10 +85,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 case "btn_stimbra": await stimbra(interaction); break;
                 case "btn_aperti": await interaction.editReply("📊 Dashboard disponibile via Web."); break;
             }
-        } catch (e) { 
-            console.error(e);
-            await interaction.editReply("❌ Errore durante la timbratura."); 
-        }
+        } catch (e) { await interaction.editReply("❌ Errore scansione."); }
     }
 });
 
