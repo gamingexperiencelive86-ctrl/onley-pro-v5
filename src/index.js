@@ -7,6 +7,7 @@ import { timbra, pausa, rientra, stimbra } from "./commands/clock.js";
 
 dotenv.config();
 
+// SOSTITUISCI CON IL TUO ID (Esempio: "123456789012345678")
 const PROPRIETARIO_ID = "945771887340978246"; 
 
 const client = new Client({ 
@@ -37,7 +38,7 @@ client.once(Events.ClientReady, async () => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isChatInputCommand()) {
-        // Evita il timeout di 3 secondi (Flag 64 = Ephemeral)
+        // Evita il timeout di 3 secondi (Flags: 64 è Ephemeral)
         await interaction.deferReply({ flags: [64] });
 
         try {
@@ -68,12 +69,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
             }
         } catch (err) {
             console.error("Errore Database:", err);
-            await interaction.editReply("❌ Errore critico nel database.");
+            await interaction.editReply("❌ Errore critico nel database. Controlla i log.");
         }
     }
 
     if (interaction.isButton()) {
-        // I bottoni caricano sempre una risposta veloce
         await interaction.deferReply({ flags: [64] });
         try {
             switch (interaction.customId) {
@@ -81,9 +81,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 case "btn_pausa": await pausa(interaction); break;
                 case "btn_rientra": await rientra(interaction); break;
                 case "btn_stimbra": await stimbra(interaction); break;
-                case "btn_aperti": await interaction.editReply("📊 Controlla la Dashboard Web!"); break;
+                case "btn_aperti": await interaction.editReply("📊 Dashboard disponibile via Web."); break;
             }
-        } catch (e) { await interaction.editReply("❌ Errore scansione."); }
+        } catch (e) { 
+            console.error(e);
+            await interaction.editReply("❌ Errore durante la timbratura."); 
+        }
     }
 });
 
