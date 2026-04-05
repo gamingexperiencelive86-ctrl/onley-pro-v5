@@ -12,6 +12,8 @@ model License {
   guildId   String   @unique
   active    Boolean  @default(true)
   expiresAt DateTime
+
+  @@map("license")
 }
 
 model TimeLog {
@@ -25,4 +27,6 @@ model TimeLog {
   totalPauseMin  Int       @default(0)
   totalWorkMin   Int       @default(0)
   status         String    @default("LAVORO")
+
+  @@map("timelog")
 }
